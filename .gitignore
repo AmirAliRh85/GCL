@@ -4,8 +4,9 @@
 
 # assets
 *.ttf
-*.png
 *.jpg
+*.jpg
+assets/
 
 # build file
 makefile

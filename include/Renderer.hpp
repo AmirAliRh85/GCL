@@ -102,9 +102,9 @@ namespace gcl2
                 CORE.Static.addImage(temp , index_to_draw);
             }
 
-            unsigned int loadFont(const char* font_path , unsigned int font_size , Language lang)
+            unsigned int loadFont(const char* font_path , int r , int g , int b , unsigned int font_size = 12 , Language lang = LANGUAGE_ENGLISH)
             {
-                return CORE.Static.loadFont(font_path , font_size , lang);
+                return CORE.Static.loadFont(font_path , r , g , b , font_size , lang);
             }
 
             void drawText(Vec2 point , const char* text , unsigned int font_id)

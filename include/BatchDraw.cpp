@@ -186,7 +186,7 @@ namespace gcl2
     }
 
 
-    unsigned int BatchDraw::_Static::loadFont(const char* font_path , unsigned int font_size , Language lang)
+    unsigned int BatchDraw::_Static::loadFont(const char* font_path , int r , int g , int b , unsigned int font_size  , Language lang)
     {
         EF[currEFIdx].fontSize = font_size;
 
@@ -212,9 +212,9 @@ namespace gcl2
 
                 for (int i = 0; i < w * h; ++i)
                 {
-                    rgba[i*4 + 0] = 0;
-                    rgba[i*4 + 1] = 0;
-                    rgba[i*4 + 2] = 0;
+                    rgba[i*4 + 0] = r;
+                    rgba[i*4 + 1] = g;
+                    rgba[i*4 + 2] = b;
                     rgba[i*4 + 3] = face->glyph->bitmap.buffer[i];
                 }
 

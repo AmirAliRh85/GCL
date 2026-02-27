@@ -135,7 +135,7 @@ namespace gcl2
 
             void addImage(float* arr , unsigned int target_index);
 
-            unsigned int loadFont(const char* font_path , unsigned int font_size , Language lang);
+            unsigned int loadFont(const char* font_path , int r , int g , int b , unsigned int font_size , Language lang);
 
             void addText(Vec2 point , const char* text , unsigned int font_id , Vec2 wnd);
         };
