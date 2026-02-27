@@ -19,14 +19,15 @@ int main()
 {
     init();
 
-    Window window(330 , 330 , "main" , WINDOW_SHOWN , 50 , 50);
+    Window window(400 , 400 , "main" , WINDOW_SHOWN , 50 , 50);
     Renderer rend(window);
     Rect rect = {10 , 10 , 100 , 100};
     
-    rend.loadImage("./brick.jpg");
+    rend.loadFont("Roboto-Regular.ttf" , 12 , LANGUAGE_ENGLISH);
     rend.loadImage("icon-user.png");
-    // std::cout << "سلام چطوری" << '\n';
+    rend.loadImage("./brick.jpg");
 
+    const char* str = "Hello World!";
     while(window.isRunning())
     {
         window.update();
@@ -39,16 +40,21 @@ int main()
         rend.drawFilledRectangle({220 , 220 , 10 , 10} , 120 , 120 , 240);
         rend.drawFilledRectangle({230 , 230 , 10 , 10} , 120 , 120 , 240);
 
-        rend.drawImage(rect , 0);
+        // rend.drawImage(rect , 0);
         rend.drawImage({160 , 10 , 50 , 50} , 0);
 
         rend.drawImage({250 , 250 , 64 , 64} , 1);
 
+        rend.drawImage({260 , 10 , 50 , 50} , 0);
+
+
+        rend.drawText({10 , 20} , str , 0);
+
 
         if (window.keyboard.isPressed(KEY_W))
-            rect.y -= 5;
+            str += 'w';
         if (window.keyboard.isPressed(KEY_S))
-            rect.y += 5;
+            str += 'h';
 
         rend.update();
     }

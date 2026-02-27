@@ -3,6 +3,18 @@
 #include "../external/glad/include/glad.h"
 #include <GLFW/glfw3.h>
 
+#define GCL_MAJOR_VERSION   1
+#define GCL_MINOR_VERSION   1
+#define GCL_PATCH_VERSION   0
+
+#define GCL_VERSION         "1.1.0"
+
+/*
+*   1.0.0       Initial version
+*   1.1.0       ADD : rendering Text
+*/
+
+
 namespace gcl2
 {
     inline void init() { glfwInit() ; }

@@ -1,3 +1,11 @@
+# compiled file
 *.exe
 *.dll
+
+# assets
+*.ttf
+*.png
+*.jpg
+
+# build file
 makefile

@@ -3,13 +3,6 @@
 
 #include "./Window.hpp"
 #include "./BatchDraw.hpp"
-#include <vector>
-// #define STB_IMAGE_IMPLEMENTATION
-// #include "../external/stb/stb_image.h"
-
-#define RGBA_TO_GL(r , g , b , a) r / 255.0f , g / 255.0f , b / 255.0f , a / 255.f
-#define RGB_TO_GL(r , g , b) r / 255.0f , g / 255.0f , b / 255.0f
-#define VEC2_TO_GL(vec , window) ((float)vec.x * (2.0f / window.width)) - 1 , ((float)-(vec.y) * (2.0f / window.height)) + 1
 
 namespace gcl2
 {
@@ -80,12 +73,14 @@ namespace gcl2
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA);
             }
+
+
             // ===================================
             // |            TEXTURE              |
             // ===================================
             unsigned int loadImage(const char* file_path)
             {
-                return CORE.Static.loadTexture(file_path);
+                return CORE.Static.loadImage(file_path);
             }
 
             void drawImage(Rect rct , unsigned int index_to_draw)
@@ -103,33 +98,20 @@ namespace gcl2
                     VEC2_TO_GL(point3 , window) ,    0.0f , 0.0f , 0.0f ,   0.0f , 0.0f ,
                     VEC2_TO_GL(point4 , window) ,    0.0f , 0.0f , 0.0f ,   0.0f , 0.0f ,
                 };
-                static bool is_atlas_generated = false;
-                if (!is_atlas_generated)
-                {
-                    CORE.Static.generateTexture();
-                    is_atlas_generated = true;
-                }
 
-                if (is_atlas_generated)
-                {
-                    CORE.Static.addTexture(temp , rct , index_to_draw);
-                }
+                CORE.Static.addImage(temp , index_to_draw);
             }
 
-            // unsigned int loadFont(const char* font_path , unsigned int font_size , Language lang)
-            // {
+            unsigned int loadFont(const char* font_path , unsigned int font_size , Language lang)
+            {
+                return CORE.Static.loadFont(font_path , font_size , lang);
+            }
 
-            // }
+            void drawText(Vec2 point , const char* text , unsigned int font_id)
+            {
+                CORE.Static.addText(point , text , font_id , {window.width , window.height});
+            }
 
-            // unsigned int loadText(const char* text , unsigned int font_id)
-            // {
-
-            // }
-
-            // void drawText(Rect rct , unsigned int text_id)
-            // {
-                
-            // }
 
             // ===================================
             // |            DRAWING              |

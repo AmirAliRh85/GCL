@@ -3,6 +3,8 @@
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include "../external/stb/stb_image.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 namespace gcl2
 {
@@ -80,51 +82,81 @@ namespace gcl2
     // ============================================================================================================================
     BatchDraw::_Static::_Static(BatchDraw* own) : owner(own) { }
 
-    unsigned int BatchDraw::_Static::loadTexture(const char* file_path)
+    unsigned int BatchDraw::_Static::loadImage(const char* file_path)
     {
-        // int w , h;
-        // unsigned char* byte = stbi_load(file_path , &w , &h , NULL , 4);
-        // image[currTexturesIdx++] = {{w , h} , {rect.w , 0} , {rect.w + w , h} , byte};
-        // rect.w += w;
-        // rect.h = std::max(h , rect.h);
+        int w , h;
+        unsigned char* byte = stbi_load(file_path , &w , &h , NULL , 4);
 
-        // return currTexturesIdx - 1;
-        
-    }
-
-    void BatchDraw::_Static::generateTexture()
-    {
-        glGenTextures(1 , &texID);
-        glBindTexture(GL_TEXTURE_2D , texID);
-
-        glTexImage2D(GL_TEXTURE_2D , 0 , GL_RGBA8 , rect.w , rect.h , 0 , GL_RGBA , GL_UNSIGNED_BYTE , NULL);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        int x_offset = 0;
-        int y_offset = 0;
-        for (int i = 0 ; i < currTexturesIdx ; i++)
+        if (!TA.isInitialized)
         {
-            glTexSubImage2D(GL_TEXTURE_2D , 0 , x_offset , y_offset , image[i].size.x , image[i].size.y , GL_RGBA , GL_UNSIGNED_BYTE , image[i].byte);
-            x_offset += image[i].size.x;
-            stbi_image_free(image[i].byte);
+            TA.isInitialized = true;
+            TA.width = ATLAS_WIDTH;
+            TA.height = ATLAS_HEIGHT;
+            TA.shelves.push_back({{w , 0} , h});
+            TA.heightOccupied = h;
+
+            image[currTexturesIdx++] = {{0 , 0} , {w , h}};
+            
+            glGenTextures(1 , &texID);
+            glBindTexture(GL_TEXTURE_2D , texID);
+
+            glTexImage2D(GL_TEXTURE_2D , 0 , GL_RGBA8 , TA.width , TA.height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , NULL);
+
+            glTexSubImage2D(GL_TEXTURE_2D , 0 , 0 , 0 , w , h , GL_RGBA , GL_UNSIGNED_BYTE , byte);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         }
+        else
+        {
+            bool is_inserted = false;
+            for (auto& s : TA.shelves)
+            {
+                if (h <= s.height && s.current.x + w <= TA.width)
+                {
+                    image[currTexturesIdx++] = {{s.current.x , s.current.y} , {s.current.x + w , s.current.y + h}};
+                    
+                    glTexSubImage2D(GL_TEXTURE_2D , 0 , s.current.x , s.current.y , w , h , GL_RGBA , GL_UNSIGNED_BYTE , byte);
+                    
+                    s.current.x += w;
+                    is_inserted = true;
+                    break;
+                }
+            }
+
+            if (!is_inserted)
+            {
+                TA.shelves.push_back({{0 , TA.heightOccupied} , h});
+                image[currTexturesIdx++] = {{0 , TA.heightOccupied} , {w , TA.heightOccupied + h}};
+                
+                glTexSubImage2D(GL_TEXTURE_2D , 0 , 0 , TA.heightOccupied , w , h , GL_RGBA , GL_UNSIGNED_BYTE , byte);
+                
+                TA.heightOccupied += h;
+            }
+        }
+
+        stbi_image_free(byte);
+        return currTexturesIdx - 1;
     }
 
-    void BatchDraw::_Static::addTexture(float* arr , Rect rct , unsigned int target_index)
-    {
-        float U1 = (float)image[target_index].bottomLeft.x / rect.w;
-        float U2 = (float)image[target_index].topRight.x / rect.w;
-        arr[5]  = U1     ; arr[6]  =  1.0f ;
-        arr[12] = U2     ; arr[13] =  1.0f ;
-        arr[19] = U2     ; arr[20] =  0.0f ;
 
-        arr[26] = U1     ; arr[27] =  1.0f ;
-        arr[33] = U1     ; arr[34] =  0.0f ;
-        arr[40] = U2     ; arr[41] =  0.0f ;
+    void BatchDraw::_Static::addImage(float* arr , unsigned int target_index)
+    {
+        Image& temp_image = image[target_index];
+        float U1 = temp_image.bottomLeft.x / TA.width   ;
+        float U2 = temp_image.topRight.x / TA.width     ;
+        float V1 = temp_image.bottomLeft.y / TA.height  ;
+        float V2 = temp_image.topRight.y / TA.height    ;
+
+        arr[5]  = U1    ; arr[6]  =  V2    ;
+        arr[12] = U2    ; arr[13] =  V2    ;
+        arr[19] = U2    ; arr[20] =  V1    ;
+
+        arr[26] = U1    ; arr[27] =  V2    ;
+        arr[33] = U1    ; arr[34] =  V1    ;
+        arr[40] = U2    ; arr[41] =  V1    ;
         memcpy(vertexStaticTexture + currVertexStaticTextureIdx , arr , sizeof(float) * ((int)RECTANGLE));
         currVertexStaticTextureIdx += (int)RECTANGLE;
         if (owner->currBatchShape == TRIANGLE)
@@ -150,6 +182,163 @@ namespace gcl2
                 owner->batch[owner->currBatchIdx + 1] = 2;
                 owner->currBatchShape = TRIANGLE;
             }
+        }
+    }
+
+
+    unsigned int BatchDraw::_Static::loadFont(const char* font_path , unsigned int font_size , Language lang)
+    {
+        EF[currEFIdx].fontSize = font_size;
+
+        if (lang == LANGUAGE_ENGLISH)
+        {
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+            FT_Library ft;
+            FT_Face face;
+            FT_Init_FreeType(&ft);
+            FT_New_Face(ft , font_path , 0 , &face);
+            FT_Set_Pixel_Sizes(face , 0 , font_size);
+
+            for (unsigned char c = 0 ; c < 128 ; c++)
+            {
+                if (FT_Load_Char(face , c , FT_LOAD_RENDER))
+                    continue;
+
+                int w = face->glyph->bitmap.width;
+                int h = face->glyph->bitmap.rows;
+
+                std::vector<unsigned char> rgba(w * h * 4);
+
+                for (int i = 0; i < w * h; ++i)
+                {
+                    rgba[i*4 + 0] = 0;
+                    rgba[i*4 + 1] = 0;
+                    rgba[i*4 + 2] = 0;
+                    rgba[i*4 + 3] = face->glyph->bitmap.buffer[i];
+                }
+
+                if (!TA.isInitialized)
+                {
+                    TA.isInitialized = true;
+                    TA.width = ATLAS_WIDTH;
+                    TA.height = ATLAS_HEIGHT;
+                    TA.shelves.push_back({{w , 0} , h});
+                    TA.heightOccupied = h;
+
+                    EF[currEFIdx].characters[c] = {{w , h} , {face->glyph->bitmap_left , face->glyph->bitmap_top} , {0 , 0} , {w , h} , face->glyph->advance.x};
+                   
+                    glGenTextures(1 , &texID);
+                    glBindTexture(GL_TEXTURE_2D , texID);
+
+                    glTexImage2D(GL_TEXTURE_2D , 0 , GL_RGBA8 , TA.width , TA.height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , NULL);
+
+                    // face->glyph->bitmap.buffer
+                    glTexSubImage2D(GL_TEXTURE_2D , 0 , 0 , 0 , w , h , GL_RGBA , GL_UNSIGNED_BYTE , rgba.data());
+
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                }
+                else
+                {
+                    bool is_inserted = false;
+                    for (auto& s : TA.shelves)
+                    {
+                        if (h <= s.height && s.current.x + w <= TA.width)
+                        {
+                            glTexSubImage2D(GL_TEXTURE_2D , 0 , s.current.x , s.current.y , w , h , GL_RGBA , GL_UNSIGNED_BYTE , rgba.data());
+                            
+                            EF[currEFIdx].characters[c] = {{w , h} , {face->glyph->bitmap_left , face->glyph->bitmap_top} , {s.current.x , s.current.y} , {s.current.x + w , s.current.y + h} , face->glyph->advance.x};
+
+                            s.current.x += w;
+                            is_inserted = true;
+                            break;
+                        }
+                    }
+
+                    if (!is_inserted)
+                    {
+                        TA.shelves.push_back({{0 , TA.heightOccupied} , h});
+                        
+                        glTexSubImage2D(GL_TEXTURE_2D , 0 , 0 , TA.heightOccupied , w , h , GL_RGBA , GL_UNSIGNED_BYTE , rgba.data());
+
+                        EF[currEFIdx].characters[c] = {{w , h} , {face->glyph->bitmap_left , face->glyph->bitmap_top} , {0 , TA.heightOccupied} , {w , TA.heightOccupied + h} , face->glyph->advance.x};
+                        
+                        TA.heightOccupied += h;
+                    }
+                } 
+            }
+
+            FT_Done_Face(face);
+            FT_Done_FreeType(ft);
+        }
+
+
+        currEFIdx++;
+        return currEFIdx - 1;
+    }
+
+    void BatchDraw::_Static::addText(Vec2 point , const char* text , unsigned int font_id , Vec2 wnd)
+    {
+        char c;
+        int x_pos , y_pos;
+        int x = point.x , y = point.y;
+        while (*text != '\0')
+        {
+            c = *text;
+            Character& ch = EF[font_id].characters[c]   ;
+            float U1 = ch.bottomLeft.x / TA.width       ;
+            float U2 = ch.topRight.x / TA.width         ;
+            float V1 = ch.bottomLeft.y / TA.height      ;
+            float V2 = ch.topRight.y / TA.height        ;
+
+            x_pos = x + ch.bearing.x;
+            y_pos = y - ch.bearing.y;
+
+            Vec2 point1 = {x_pos , y_pos};
+            Vec2 point2 = {x_pos + ch.size.x , y_pos};
+            Vec2 point3 = {x_pos , y_pos + ch.size.y};
+            Vec2 point4 = {x_pos + ch.size.x , y_pos + ch.size.y};
+            float arr[] = {
+                _VEC2_TO_GL(point1 , wnd) ,    0.0f , 0.0f , 0.0f ,   U1 , V1 ,
+                _VEC2_TO_GL(point2 , wnd) ,    0.0f , 0.0f , 0.0f ,   U2 , V1 ,
+                _VEC2_TO_GL(point4 , wnd) ,    0.0f , 0.0f , 0.0f ,   U2 , V2 ,
+
+                _VEC2_TO_GL(point1 , wnd) ,    0.0f , 0.0f , 0.0f ,   U1 , V1 ,
+                _VEC2_TO_GL(point3 , wnd) ,    0.0f , 0.0f , 0.0f ,   U1 , V2 ,
+                _VEC2_TO_GL(point4 , wnd) ,    0.0f , 0.0f , 0.0f ,   U2 , V2 ,
+            };
+            memcpy(vertexStaticTexture + currVertexStaticTextureIdx , arr , sizeof(float) * ((int)RECTANGLE));
+            currVertexStaticTextureIdx += (int)RECTANGLE;
+            if (owner->currBatchShape == TRIANGLE)
+            {
+                owner->batch[owner->currBatchIdx + 1] += 2;
+            }
+            else
+            {
+                if (owner->currBatchShape == NONE)
+                {
+                    owner->batch[owner->currBatchIdx] = TRIANGLE;
+                    owner->batch[owner->currBatchIdx + 1] = 2;
+                    owner->currBatchShape = TRIANGLE;
+                }
+                else
+                {
+                    if (owner->currBatchShape == BEGIN_SCISSOR || owner->currBatchShape == END_SCISSOR)
+                        owner->currBatchIdx += 1;
+                    else
+                        owner->currBatchIdx += 2;
+
+                    owner->batch[owner->currBatchIdx] = TRIANGLE;
+                    owner->batch[owner->currBatchIdx + 1] = 2;
+                    owner->currBatchShape = TRIANGLE;
+                }
+            }
+
+            x += (ch.advanceX >> 6);
+            text++;
         }
     }
     // ============================================================================================================================
@@ -206,7 +395,6 @@ namespace gcl2
         {
             debug();
             once = false;
-            std::cout << "| " << currBatchIdx << " | " << Dynamic.currVertexDynamicPrimitveIdx << " | " << currScissorIdx << '\n';
         }
 
         while (i < currBatchIdx)
@@ -283,6 +471,13 @@ namespace gcl2
                 j += 1;
             }
         }
+
+        std::cout << "| " << currBatchIdx << " | " << Dynamic.currVertexDynamicPrimitveIdx << " | " << currScissorIdx << '\n';
+
+        for (auto& s : Static.TA.shelves)
+        {
+            std::cout << "{{" << s.current.x << " , " << s.current.y << "} , " << s.height << "}" << '\n';
+        }    
     }
 
 
